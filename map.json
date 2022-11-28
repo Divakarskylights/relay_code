@@ -1,0 +1,209 @@
+{
+    "device_id": "r1",
+        "values": [
+            {
+                "meter_name": "id2",
+                "meter_id": "s2",
+                "meter_no": 1,
+                "con": {
+                    "baudRate": 9600,
+                   
+                    "parity": "even",
+                    "lock": false
+                    
+                }
+            },
+	    {
+                "meter_name": "id3",
+                "meter_id": "s3",
+                "meter_no": 3,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id4",
+                "meter_id": "s4",
+                "meter_no": 4,
+                "con": {
+                    "baudRate": 4800,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id5",
+                "meter_id": "s5",
+                "meter_no": 5,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id6",
+                "meter_id": "s6",
+                "meter_no": 6,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id7",
+                "meter_id": "s7",
+                "meter_no": 7,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id8",
+                "meter_id": "s8",
+                "meter_no": 8,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id9",
+                "meter_id": "s9",
+                "meter_no": 9,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id10",
+                "meter_id": "s10",
+                "meter_no": 10,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+	    {
+                "meter_name": "id11",
+                "meter_id": "s11",
+                "meter_no": 11,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id12",
+                "meter_id": "s12",
+                "meter_no": 12,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id13",
+                "meter_id": "s13",
+                "meter_no": 13,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id14",
+                "meter_id": "s14",
+                "meter_no": 1,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id15",
+                "meter_id": "s15",
+                "meter_no": 2,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id16",
+                "meter_id": "s16",
+                "meter_no": 3,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id17",
+                "meter_id": "s17",
+                "meter_no": 4,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            },
+            {
+                "meter_name": "id18",
+                "meter_id": "s18",
+                "meter_no": 5,
+                "con": {
+                    "baudRate": 9600,
+                    "dataBits": 8,
+                    "stopBits": 1,
+                    "parity": "even",
+                    "lock": true
+                }
+            }
+        ]
+}
