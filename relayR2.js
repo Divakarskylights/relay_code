@@ -15,7 +15,7 @@ async function getStateAlerts(getFil, Resp) {
 
     // --------------filter using RelayNumber_2-----------------
     var filterRelay2 = Resp.filter((item) => item.RELAYNUM == '2');
-
+    console.log(`filterRelay2.length${filterRelay2.length}`);
     //Check Relay_2 Available
     if (filterRelay2.length > 0) {
         for (let i = 0; i < filterRelay2.length; i++) {
@@ -39,6 +39,10 @@ async function getStateAlerts(getFil, Resp) {
                     if (aa.length > 0) {
                         console.log("_________________________");
                         console.log("Relay_2 Id's Found");
+                        let dd = new Date().getMilliseconds();
+                        let triggeronTime = new Date().toString().replace("GMT+0530 (India Standard Time)","") + dd;
+                        console.log(triggeronTime);
+                        console.log(`USER_FROMSTATE: ${element_1.FROMALERTSTATE}, USER_FROMSTATE: ${element_1.TOALERTSTATE}, Graf Prev: ${element_2.prevState}, Graf new: ${element_2.newState}`);
                     } else {
                         console.log("Relay_2 id's Not Found");
                         if (element_1.FROMALERTSTATE == element_2.prevState && element_1.TOALERTSTATE == element_2.newState || element_1.FROMALERTSTATE == "Any" && element_1.TOALERTSTATE == "Any" || element_1.FROMALERTSTATE == "Any" && element_1.TOALERTSTATE == element_2.newState || element_1.FROMALERTSTATE == element_2.prevState && element_1.TOALERTSTATE == "Any") {
@@ -202,8 +206,8 @@ async function getStateAlerts(getFil, Resp) {
 async function writeDataToCloud(element_2) {
     return new Promise(function (resolve, reject) {
         if (element_2.alertId > 0) {
-            console.log(element_2.id);
-            console.log(element_2.panelId)
+            // console.log(element_2.id);
+            // console.log(element_2.panelId)
             localInfluxClient.writePoints([
                 {
                     measurement: 'alertApi',

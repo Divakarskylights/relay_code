@@ -202,8 +202,8 @@ async function getStateAlerts(getFil, Resp) {
 async function writeDataToCloud(element_2) {
     return new Promise(function (resolve, reject) {
         if (element_2.alertId > 0) {
-            console.log(element_2.id);
-            console.log(element_2.panelId)
+            // console.log(element_2.id);
+            // console.log(element_2.panelId)
             localInfluxClient.writePoints([
                 {
                     measurement: 'alertApi',

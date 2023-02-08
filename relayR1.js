@@ -15,24 +15,25 @@ async function getStateAlerts(getFil, Resp) {
 
     // --------------filter using RelayNumber 1-----------------
     var filterRelay1 = Resp.filter((item) => item.RELAYNUM == '1');
-
+console.log(`filterRelay1.length${filterRelay1.length}`);
     //Check Relay_1 Available
     if (filterRelay1.length > 0) {
         for (let i = 0; i < filterRelay1.length; i++) {
             let element_1 = filterRelay1[i];
-            // console.log(`UserApiR1${JSON.stringify(element_1)}`);
+            console.log(`UserApiR1${JSON.stringify(element_1)}`);
 
             // filter using AlertID
             var getapiidataR1 = getFil.filter((items) => items.alertId == element_1.alertId)
             for (let index = 0; index < getapiidataR1.length; index++) {
                 let element_2 = getapiidataR1[index];
-                // console.log(`grafApiR1${JSON.stringify(element_2.id)}`);
+                console.log(`grafApiR1${JSON.stringify(element_2.id)}`);
 
                 //check id using influx Database
                 localInfluxClient.query('SELECT * FROM alertApi').then(async (items) => {
                     const aa = items.filter(function (e) {
                         return e.id == element_2.id;
                     });
+                    
 
                     //Grafana APIId check & Waiting Condition
 
@@ -45,12 +46,11 @@ async function getStateAlerts(getFil, Resp) {
                         let triggeronTime = new Date().toString().replace("GMT+0530 (India Standard Time)","") + dd;
                         console.log(triggeronTime);
 
-                        console.log(`mmm${element_1.FROMALERTSTATE}, ${element_2.prevState}, ${element_1.TOALERTSTATE}, ${element_2.newState}`);
-                        // console.log(tDelayR1num);
+                        console.log(`USER_FROMSTATE: ${element_1.FROMALERTSTATE}, USER_FROMSTATE: ${element_1.TOALERTSTATE}, Graf Prev: ${element_2.prevState}, Graf new: ${element_2.newState}`);                        
                     } else {
                         console.log(`Relay _1 id's Not Found${element_1.RELAYSTATE}`);
                         // console.log(element_2.alertId);
-                        console.log(`mmm${element_1.FROMALERTSTATE}, ${element_2.prevState}, ${element_1.TOALERTSTATE}, ${element_2.newState}`);
+                        console.log(`USER_FROMSTATE: ${element_1.FROMALERTSTATE}, USER_FROMSTATE: ${element_1.TOALERTSTATE}, Graf Prev: ${element_2.prevState}, Graf new: ${element_2.newState}`);
                         
                         // console.log(tDelayR1);
 
@@ -59,15 +59,17 @@ async function getStateAlerts(getFil, Resp) {
                             element_1.FROMALERTSTATE == "Any" && element_1.TOALERTSTATE == element_2.newState || element_1.FROMALERTSTATE == element_2.prevState && element_1.TOALERTSTATE == "Any"){
                             let tLoopR1_1 = true;
                             let tLoopR1_2 = tLoopR1_3;
-                            // console.log(`First${tLoopR1_1}, Sec${tLoopR1_2}, Thir${tLoopR1_3}`);
+                            console.log(`First${tLoopR1_1}, Sec${tLoopR1_2}, Thir${tLoopR1_3}`);
                             if (tLoopR1_1 == tLoopR1_2) {
                                 tLoopR1_3 = false;
-                                var setTR1 = element_1.TIMEDELAY + "000" >= 3000 ? element_1.TIMEDELAY + "000" - 1000 : element_1.TIMEDELAY + "000";
+                                console.log("Two");
+                                // var setTR1 = element_1.TIMEDELAY + "000" >= 3000 ? element_1.TIMEDELAY + "000" - 1000 : element_1.TIMEDELAY + "000";
                                 // console.log(`R1vdvddvdvDependent${element_1.R1}, localhostR1${localStorage.getItem('R1')}, localhostR2${localStorage.getItem('R2')}, R1STATE${element_1.RELAYSTATE}, tLoopR1_1-${tLoopR1_1}, tLoopR1_2-${tLoopR1_2}, tLoopR1_3-${tLoopR1_3}`);
                                 // await writeDataToCloud(element_2);
                                 // console.log(`Successfully____ON${element_1.RELAYSTATE == "ON" && localStorage.getItem("R1") == 'true'}`);
                                 // console.log(`Successfully____OFF${element_1.RELAYSTATE == "OFF" && localStorage.getItem("R1") == 'false'}`);
                                 waitR1check = setTimeout(async () => {
+                                    console.log("Three");
                                     if (element_1.RELAYSTATE == "ON" && localStorage.getItem("R1") == 'true') {
                                         let dd = new Date().getMilliseconds();
                                         let triggeronTime = new Date().toString().replace("GMT+0530 (India Standard Time)","") + dd;
@@ -81,7 +83,7 @@ async function getStateAlerts(getFil, Resp) {
                                         let RcretedTime = new Date(element_2.created).toString();
                                         let RCom = element_1.RELAYSTATE;
                                         let RtimeDelay = element_1.TIMEDELAY == "0" ? 1000 : element_1.TIMEDELAY + "000";
-                                        await triggeronSwitch1.triggeron(Rpin, Relname, RCom, triggeronTime, Rid, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay);
+                                        await triggeronSwitch1.triggeron(Rpin, Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay);
                                         await writeDataToCloud(element_2);
                                         console.log("successfully ON");
                                         tLoopR1_3 = true;
@@ -98,7 +100,7 @@ async function getStateAlerts(getFil, Resp) {
                                         let RcretedTime = new Date(element_2.created).toString();
                                         let RCom = element_1.RELAYSTATE;
                                         let RtimeDelay = element_1.TIMEDELAY == "0" ? 1000 : element_1.TIMEDELAY + "000";
-                                        await triggeronSwitch1.triggeroff(Rpin, Relname, RCom, triggeronTime, Rid, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay);
+                                        await triggeronSwitch1.triggeroff(Rpin, Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay);
                                         console.log("successfully OFF");
                                         await writeDataToCloud(element_2);
                                         tLoopR1_3 = true;
@@ -244,8 +246,8 @@ async function getStateAlerts(getFil, Resp) {
 async function writeDataToCloud(element_2) {
     return new Promise(function (resolve, reject) {
         if (element_2.alertId > 0) {
-            console.log(element_2.id);
-            console.log(element_2.panelId)
+            // console.log(element_2.id);
+            // console.log(element_2.panelId)
             localInfluxClient.writePoints([
                 {
                     measurement: 'alertApi',

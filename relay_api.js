@@ -5,8 +5,8 @@ const bodyParser = require('body-parser');
 const gpiopw = require('rpi-gpio').promise;
 // const { header } = require('express/lib/request');
 const localStorage = require("localStorage");
-// const influx = require('influx');
-// const localInfluxClient = new influx.InfluxDB('http://localhost:8086/iiaphosk');
+const influx = require('influx');
+const localInfluxClient = new influx.InfluxDB('http://localhost:8086/staroffice');
 // const axios = require('axios')
 const app = express();
 // const cron = require('node-cron');
@@ -49,6 +49,7 @@ var d2_0 = [];
 var d2_1 = [];
 var con = [];
 var getFilterdata = [];
+var chart =[];
 
 module.exports.triggeron = triggeron;
 module.exports.triggeroff = triggeroff;
@@ -62,7 +63,7 @@ const sleep = require('sleep-promise');
 
 // Status of Relay's
 
-function startup() {
+async function startup() {
 
     // Status of Relay 1
     if (rel1.readSync() === 0) {
@@ -149,7 +150,6 @@ function startup() {
 startup();
 
 // Mail declarations
-
 async function msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8) {
     let transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
@@ -170,44 +170,43 @@ async function msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafn
     };
 
     transporter.use('compile', hbs(handlebarOptions));
-
+    res.send(status);
     let messageOptions = {
         from: 'skylightstesting@gmail.com',
         to: 'skylightstesting@gmail.com',
         subject: `Alert ${Relname}`,
         // text: textmail, 
         template: 'email', // the name of the template file i.e email.handlebars
-    context:{
-        Command:            RCom, 
-        User_From_Alert:    RuserFrom,
-        Grafana_From_Alert: Rgrafprev,
-        CreatedTime:        RcretedTime,
-        User_To_Alert:      RuserTo,
-        Grafana_To_Alert:   Rgrafnew,
-        TriggerTime:        triggeronTime,
-        Check_Status:       localStorage.getItem(Rid) == "true" ? "OFF": "ON",
-        Check_Time:         RCheckTime,
-        R1:   R1, 
-        R2: R2, 
-        R3: R3,
-        R4: R4,
-        R5: R5,
-        R6: R6,
-        R7: R7,
-        R8: R8,
-        Delay_Time: RtimeDelay
-    }
+        context: {
+            Command: RCom,
+            User_From_Alert: RuserFrom,
+            Grafana_From_Alert: Rgrafprev,
+            CreatedTime: RcretedTime,
+            User_To_Alert: RuserTo,
+            Grafana_To_Alert: Rgrafnew,
+            TriggerTime: triggeronTime,
+            Check_Status: localStorage.getItem(Rid) == "true" ? "OFF" : "ON",
+            Check_Time: RCheckTime,
+            R1: R1,
+            R2: R2,
+            R3: R3,
+            R4: R4,
+            R5: R5,
+            R6: R6,
+            R7: R7,
+            R8: R8,
+            Delay_Time: RtimeDelay
+        }
     };
-
     transporter.sendMail(messageOptions, function (error, info) {
         if (error) {
             throw error;
         } else {
-            console.log(Relname);
+            // console.log(Relname);
             console.log('Email successfully sent!');
         }
     });
-  
+
 }
 
 
@@ -224,43 +223,22 @@ async function msg_Inst(textmail, Relname) {
         }
     });
 
-    // const handlebarOptions = {
-    //     viewEngine: {
-    //         partialsDir: path.resolve('./views/'),
-    //         defaultLayout: false,
-    //     },
-    //     viewPath: path.resolve('./views/'),
-    // };
-
-    // transporter.use('compile', hbs(handlebarOptions));
-
     let messageOptions = {
         from: 'skylightstesting@gmail.com',
         to: 'skylightstesting@gmail.com',
         subject: `Alert ${Relname}`,
-        text: textmail, 
-    //     template: 'email', // the name of the template file i.e email.handlebars
-    // context:{
-    //     Command:            RCom, // replace {{name}} with Adebola
-    //     User_From_Alert:    `${"User_From_Alert:", RuserFrom, "/", "Grafana_From_Alert:", Rgrafprev, "/",RcretedTime}`,
-    //     User_To_Alert:      `${"User_To_Alert:",RuserTo, "/", "Grafana_To_Alert:", Rgrafnew, "/" ,RcretedTime}`,
-    //     TriggerTime:        triggerR1onTime,
-    //     Check_Status:       localStorage.getItem(Rid) == "true" ? "OFF": "ON",
-    //     Check_Time:         RCheckTime,
-    //     Dependent_Relays:   `${"R1:", R1, "R2:", R2, "R3:", R3, "R4:", R4, "R5:", R5, "R6:", R6, "R7:", R7, "R8:", R8}`,
-    //     Delay_Time: RtimeDelay
-    // }
+        text: textmail,
     };
 
     transporter.sendMail(messageOptions, function (error, info) {
         if (error) {
             throw error;
         } else {
-            console.log(Relname);
+            // console.log(Relname);
             console.log('Email successfully sent!');
         }
     });
-  
+
 }
 
 
@@ -269,22 +247,27 @@ async function msg_Inst(textmail, Relname) {
 function time(sendTime, Relname, Rid) {
     request(adr, { json: true }, async (err, res, body) => {
         if (err) {
-            console.log(err.port);
+            console.log(`Errorrrrrrrrrrrrrrrrrrrrrrrrrr${err.port}`);
             return sendTime = new Date.now();
+        }else{
+        // console.log(`TImeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee${body}`);
+        if (sendTime != 'Sch' && localStorage.getItem(Rid) != "true") {
+            textmail = `Instant ${Relname} Date:${body.datetime.slice(0, 19).replace("T", " Time: ")} ON Successfully`;
+        } else if (sendTime != 'Sch' && localStorage.getItem(Rid) != "false") {
+            textmail = `Instant ${Relname} Date:${body.datetime.slice(0, 19).replace("T", " Time: ")} OFF Successfully`;
+        } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "true") {
+            textmail = `Scheduled ${Relname} Date:${body.datetime.slice(0, 19).replace("T", " Time: ")} ON Successfully`;
+        } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "false") {
+            textmail = `Scheduled ${Relname} Date:${body.datetime.slice(0, 19).replace("T", " Time: ")} OFF Successfully`;
+        } else {
+            textmail = `nothing ${SchTime, localStorage.getItem(Rid)}`
         }
-        console.log(body);
-        sendTime = body.datetime.slice(0, 19).replace("T", " Time: ");
-        console.log(body.datetime.slice(0, 19).replace("T", " Time: "));
-        var textmail = localStorage.getItem(Rid) != "true" ? `Instant ${Relname} Date:${sendTime} ON Successfully` : `Instant ${Relname} Date:${sendTime} OFF Successfully`;
-        console.log(Relname);
+    }
         return msg_Inst(textmail, Relname);
     });
 }
 
-
-
 // call api filter panel data 
-
 app.use("/filter", (req, res, next) => {
     new Promise((resolve, reject) => {
         request(
@@ -324,7 +307,7 @@ app.use("/filter", (req, res, next) => {
         }
         return isValid;
     });
-    console.log(filteredUsers);
+    // console.log(filteredUsers);
     res.send(filteredUsers);
 });
 
@@ -357,18 +340,15 @@ app.use("/names", (req, res, next) => {
                         console.log("Alert is Empty");
                     }
                 }
-            }
-        );
+            });
     });
 
     function getUniqueListBydata(d2_0, key) {
         return [...new Map(d2_0.map((item) => [item[key], item])).values()];
     }
     getFilterdata = getUniqueListBydata(d2_0, "alertId");
-    // console.log("Unique by place");
     for (let x = 0; x < getFilterdata.length; x++) {
-        // console.log(`Data: ${JSON.stringify(getFilterdata[0].id)}`);
-        // console.log(`Data:${getFilterdata}`);
+
     }
     res.send(getFilterdata);
 });
@@ -387,13 +367,14 @@ app.post('/switchLedR1', async function (req, res) {
     });
     if (status == true) {
         localStorage.setItem('R1', 'true');
-        console.log(`T${status}`);
+
     } else {
         localStorage.setItem('R1', 'false');
-        console.log(`F${status}`);
+
     }
     let Relname = 'Relay_1';
     let Rid = 'R1';
+    let sendTime = "1"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -423,6 +404,7 @@ app.post('/switchLedR2', async function (req, res) {
     }
     let Relname = 'Relay_2';
     let Rid = 'R2';
+    let sendTime = "2"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -452,6 +434,7 @@ app.post('/switchLedR3', async function (req, res) {
     }
     let Relname = 'Relay_3';
     let Rid = 'R3';
+    let sendTime = "3"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -476,12 +459,12 @@ app.post('/switchLedR4', async function (req, res) {
         localStorage.setItem('R4', 'true');
         console.log(`T${status}`);
     } else {
-
         localStorage.setItem('R4', 'false');
         console.log(`F${status}`);
     }
     let Relname = 'Relay_4';
     let Rid = 'R4';
+    let sendTime = "4"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -503,16 +486,15 @@ app.post('/switchLedR5', async function (req, res) {
         console.log(`error:${err.toString()}`);
     });
     if (status == true) {
-
         localStorage.setItem('R5', 'true');
         console.log(`T${status}`);
     } else {
-
         localStorage.setItem('R5', 'false');
         console.log(`F${status}`);
     }
     let Relname = 'Relay_5';
     let Rid = 'R5';
+    let sendTime = "5"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -534,16 +516,15 @@ app.post('/switchLedR6', async function (req, res) {
         console.log(`error:${err.toString()}`);
     });
     if (status == true) {
-
         localStorage.setItem('R6', 'true');
         console.log(`T${status}`);
     } else {
-
         localStorage.setItem('R6', 'false');
         console.log(`F${status}`);
     }
     let Relname = 'Relay_6';
     let Rid = 'R6';
+    let sendTime = "6"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -575,6 +556,7 @@ app.post('/switchLedR7', async function (req, res) {
     }
     let Relname = 'Relay_7';
     let Rid = 'R7';
+    let sendTime = "7"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -606,6 +588,7 @@ app.post('/switchLedR8', async function (req, res) {
     }
     let Relname = 'Relay_8';
     let Rid = 'R8';
+    let sendTime = "8"
     time(sendTime, Relname, Rid);
     res.send(status);
 });
@@ -620,29 +603,56 @@ console.log('server started on port 9000');
 
 
 
+//influx Chart
+
+// relay8 get and post request
+app.post('/influxChart', async function (req, res) {
+    const statusExits = req && req.body && req.body.status != null;
+    const status = statusExits ? req.body.status.toString() : "null";
+    console.log(`Sta:${req.body.status.toString()}`);
+    // res.setHeader('Content-Type', 'text/html');
+    localInfluxClient.query(`select * from ${status}`).then(async (api) =>{
+        chart = api
+        console.log(`Chart ${JSON.parse(JSON.stringify(chart))}`);
+       return res.send(JSON.parse(JSON.stringify(chart)));
+
+        
+    });
+    
+//    return res.send(chart);
+});
+
+app.get('/infChart', (req, res) => {
+    // console.log(localStorage.getItem('R8'))
+    res.send(chart);
+});
+
+
 // Trigger Relay's ON
 
-async function triggeron(Rpin, Relname, RCom, triggeronTime, Rid, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime,  RtimeDelay) {
+async function triggeron(Rpin, Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay) {
     return gpiopw.setup(Rpin, gpiopw.DIR_OUT).then(async () => {
+        console.log(`Ridddddddddddddddd: ${Rid}`);
         localStorage.setItem(Rid, 'false');
-        // console.log(`onnnn${localStorage.setItem('R1', signalR1)}`);
-        
         let R1 = localStorage.getItem('R1') == "true" ? "OFF" : "ON";
         let R2 = localStorage.getItem('R2') == "true" ? "OFF" : "ON";
         let R3 = localStorage.getItem('R3') == "true" ? "OFF" : "ON";
-        let R4 = localStorage.getItem('R4') == "true" ? "OFF" : "ON"; 
+        let R4 = localStorage.getItem('R4') == "true" ? "OFF" : "ON";
         let R5 = localStorage.getItem('R5') == "true" ? "OFF" : "ON";
         let R6 = localStorage.getItem('R6') == "true" ? "OFF" : "ON";
         let R7 = localStorage.getItem('R7') == "true" ? "OFF" : "ON";
         let R8 = localStorage.getItem('R8') == "true" ? "OFF" : "ON";
         let dd = new Date().getMilliseconds();
-        let RCheckTime =  new Date().toString().replace("GMT+0530 (India Standard Time)","")+ dd;
-        // var textmail = `Command : ${triggerR1onTime} - ${Relname} ON Successfully `;
-        await msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8);
-        // console.log(`ON${signalR1}`);
-        // console.log("onsuccess" + getONdata);
-        localStorage.setItem(Rid, 'false');
-        return gpiopw.write(Rpin, false);
+        let RCheckTime = new Date().toString().replace("GMT+0530 (India Standard Time)", "") + dd;
+        return gpiopw.write(Rpin, false).then(async () => {
+            console.log("Helloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo");
+            // sendTime = body.datetime.slice(0, 19).replace("T", " Time: ");
+            console.log(`Rgrafnewwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww: ${Rgrafnew == null}`);
+            let sendTime = 'Sch'
+            Rgrafnew == null ?
+                time(sendTime, Relname, Rid)
+                : await msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8);
+        });
     }).catch((err) => {
         console.log(`error:${err.toString()}`);
     });
@@ -651,99 +661,105 @@ async function triggeron(Rpin, Relname, RCom, triggeronTime, Rid, RuserFrom, Rus
 
 // Trigger Relay's OFF
 
-async function triggeroff(Rpin, Relname, RCom, triggeronTime, Rid, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime,  RtimeDelay) {
+async function triggeroff(Rpin, Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay) {
     return gpiopw.setup(Rpin, gpiopw.DIR_OUT).then(async () => {
         localStorage.setItem(Rid, 'true');
         let R1 = localStorage.getItem('R1') == "true" ? "OFF" : "ON";
         let R2 = localStorage.getItem('R2') == "true" ? "OFF" : "ON";
         let R3 = localStorage.getItem('R3') == "true" ? "OFF" : "ON";
-        let R4 = localStorage.getItem('R4') == "true" ? "OFF" : "ON"; 
+        let R4 = localStorage.getItem('R4') == "true" ? "OFF" : "ON";
         let R5 = localStorage.getItem('R5') == "true" ? "OFF" : "ON";
         let R6 = localStorage.getItem('R6') == "true" ? "OFF" : "ON";
         let R7 = localStorage.getItem('R7') == "true" ? "OFF" : "ON";
         let R8 = localStorage.getItem('R8') == "true" ? "OFF" : "ON";
         let dd = new Date().getMilliseconds();
-        let RCheckTime =  new Date().toString().replace("GMT+0530 (India Standard Time)","")+ dd;
-        
-        // var textmail = `Scheduled ${triggerR1offTime} - ${Relname} OFF Successfully`;
-        await msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8);
-        // console.log(`OFF${signalR1}`);
-        // console.log("offsuccess" + getOFFdata);
+        let RCheckTime = new Date().toString().replace("GMT+0530 (India Standard Time)", "") + dd;
         localStorage.setItem(Rid, 'true')
-        return gpiopw.write(Rpin, true);
+        return gpiopw.write(Rpin, true).then(async () => {
+            let sendTime = 'Sch'
+            Rgrafnew == null ?
+                time(sendTime, Relname, Rid)
+                : await msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8);
+        });
     }).catch((err) => {
         console.log(`error:${err.toString()}`);
     });
 }
 
-
+// async function checkDays(getONDay){
+//     var dayList = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+//     var day = dayList[new Date().getDay()];
+//     var dbDays = getONDay.split(', ');
+//     var isdaysMatch = dbDays.
+// }
 
 
 async function getonData() {
     url = 'http://192.168.1.93/Sky/findOnBadge.php';
     request(url, async (error, response, body) => {
         if (!error && response.statusCode === 200) {
-            const Response = JSON.parse(body)
-            getON = Response;
-            // console.log(getON);
+            // const Response 
+            getON = JSON.parse(body)
+            // getON = Response;
             now = new Date();
             for (let x = 0; x < getON.length; x++) {
-                // const getONdata = getON[x].ONDATE + getON[x].ONTIME;
                 const getONdata = getON[x].DATETIME;
                 const getONRelay = getON[x].RELAY;
+                const getONDays = getON[x].DAYS.toString();
                 const onvalue = date.format(now, 'YYYY-MM-DD HH:mm');
-                // console.log("current date and time : " + onvalue);
-                // console.log(getONdata);
-                // console.log(`Relayssssss${getONRelay.length}`);
-                if (onvalue == getONdata && localStorage.getItem('R1') != "false" && getONRelay == "") {
+                var dayList = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                var day = dayList[new Date().getDay()];
+                var dbDays = getONDays.split(', ');
+                var isdaysMatch = dbDays.includes(day);
+                console.log("......................:", isdaysMatch, getONDays.length);
+                // console.log('checkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',localStorage.getItem('R1'));
+                if (onvalue == getONdata && localStorage.getItem('R1') != "false" && getONRelay == 1 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 29;
                     let Relname = 'Relay_1';
-                    let Rid = 'R1'
+                    let Rid = 'R1';
                     await triggeron(Rpin, Relname, Rid);
                 }
-                else if (onvalue == getONdata && localStorage.getItem('R2') != "false" && getONRelay == 2) {
+                else if (onvalue == getONdata && localStorage.getItem('R2') != "false" && getONRelay == 2 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 31;
                     let Relname = 'Relay_2';
-                    let Rid = 'R2'
+                    let Rid = 'R2';
                     await triggeron(Rpin, Relname, Rid);
-                } else if (onvalue == getONdata && localStorage.getItem('R3') != "false" && getONRelay == 3) {
+                } else if (onvalue == getONdata && localStorage.getItem('R3') != "false" && getONRelay == 3 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 33;
                     let Relname = 'Relay_3';
-                    let Rid = 'R3'
+                    let Rid = 'R3';
                     await triggeron(Rpin, Relname, Rid);
-                } else if (onvalue == getONdata && localStorage.getItem('R4') != "false" && getONRelay == 4) {
+                } else if (onvalue == getONdata && localStorage.getItem('R4') != "false" && getONRelay == 4 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 36;
                     let Relname = 'Relay_4';
-                    let Rid = 'R4'
+                    let Rid = 'R4';
                     await triggeron(Rpin, Relname, Rid);
-                } else if (onvalue == getONdata && localStorage.getItem('R5') != "false" && getONRelay == 5) {
+                } else if (onvalue == getONdata && localStorage.getItem('R5') != "false" && getONRelay == 5 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 35;
                     let Relname = 'Relay_5';
-                    let Rid = 'R5'
+                    let Rid = 'R5';
                     await triggeron(Rpin, Relname, Rid);
                 }
-                else if (onvalue == getONdata && localStorage.getItem('R6') != "false" && getONRelay == 6) {
+                else if (onvalue == getONdata && localStorage.getItem('R6') != "false" && getONRelay == 6 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 38;
                     let Relname = 'Relay_6';
-                    let Rid = 'R6'
+                    let Rid = 'R6';
                     await triggeron(Rpin, Relname, Rid);
                 }
-                else if (onvalue == getONdata && localStorage.getItem('R7') != "false" && getONRelay == 7) {
+                else if (onvalue == getONdata && localStorage.getItem('R7') != "false" && getONRelay == 7 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 40;
                     let Relname = 'Relay_7';
-                    let Rid = 'R7'
+                    let Rid = 'R7';
                     await triggeron(Rpin, Relname, Rid);
                 }
-                else if (onvalue == getONdata && localStorage.getItem('R7') != "false" && getONRelay == 8) {
+                else if (onvalue == getONdata && localStorage.getItem('R7') != "false" && getONRelay == 8 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 37;
                     let Relname = 'Relay_8';
-                    let Rid = 'R8'
+                    let Rid = 'R8';
                     await triggeron(Rpin, Relname, Rid);
                 }
                 else {
-
-                    //  console.log("onunsuccess");
-
+                    console.log("onunsuccess");
                 }
             }
         } else {
@@ -758,68 +774,68 @@ async function getoffData() {
     url = 'http://192.168.1.93/Sky/findOffBadge.php';
     request(url, async (error, response, body) => {
         if (!error && response.statusCode === 200) {
-            const Response = JSON.parse(body)
-            getOFF = Response;
+            getOFF = JSON.parse(body);
             now = new Date();
             for (let x = 0; x < getOFF.length; x++) {
-                // const getOFFdata = getOFF[x].OFFDATE + getOFF[x].OFFTIME;
                 const getOFFdata = getOFF[x].DATETIME;
                 const getOFFRelay = getOFF[x].RELAY;
+                const getOFFDays = getOFF[x].DAYS;
                 const offvalue = date.format(now, 'YYYY-MM-DD HH:mm');
-                // console.log("current date and time : " + offvalue);
-                // console.log(getOFFdata);
-                // console.log(`${signalR1}`);
-                if (offvalue == getOFFdata && localStorage.getItem('R1') != "true" && getOFFRelay == "") {
+                console.log("current date and time : " + offvalue);
+                var dayList = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                var day = dayList[new Date().getDay()];
+                var dbOFFDays = getOFFDays.split(', ');
+                var isOFFdaysMatch = dbOFFDays.includes(day);
+                console.log("Divkaar:", isOFFdaysMatch, getOFFDays.length);
+                if (offvalue == getOFFdata && localStorage.getItem('R1') != "true" && getOFFRelay == 1 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 29;
                     let Relname = 'Relay_1';
                     let Rid = 'R1'
+                    console.log("triggerR1");
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R2') != "true" && getOFFRelay == 2) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R2') != "true" && getOFFRelay == 2 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 31;
                     let Relname = 'Relay_2';
                     let Rid = 'R2'
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R3') != "true" && getOFFRelay == 3) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R3') != "true" && getOFFRelay == 3 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 33;
                     let Relname = 'Relay_3';
                     let Rid = 'R3'
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R4') != "true" && getOFFRelay == 4) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R4') != "true" && getOFFRelay == 4 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 36;
                     let Relname = 'Relay_4';
                     let Rid = 'R4'
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R5') != "true" && getOFFRelay == 5) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R5') != "true" && getOFFRelay == 5 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 35;
                     let Relname = 'Relay_5';
                     let Rid = 'R5'
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R6') != "true" && getOFFRelay == 6) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R6') != "true" && getOFFRelay == 6 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 38;
                     let Relname = 'Relay_6';
                     let Rid = 'R6'
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R7') != "true" && getOFFRelay == 7) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R7') != "true" && getOFFRelay == 7 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 40;
                     let Relname = 'Relay_7';
                     let Rid = 'R7'
                     await triggeroff(Rpin, Relname, Rid);
-                } else if (offvalue == getOFFdata && localStorage.getItem('R8') != "true" && getOFFRelay == 8) {
+                } else if (offvalue == getOFFdata && localStorage.getItem('R8') != "true" && getOFFRelay == 8 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 37;
                     let Relname = 'Relay_8';
                     let Rid = 'R8'
                     await triggeroff(Rpin, Relname, Rid);
                 } else {
-                    //  console.log("offunsuccess");
+                    console.log("offunsuccess");
                 }
             }
         } else {
             console.log("Error Url");
         }
     });
-}
-function gg() {
-    console.log("hello");
 }
 
 
@@ -843,16 +859,16 @@ setInterval(async () => {
             }, async function (err, res) {
                 if (err) return console.error(err.message);
                 var getFil = JSON.parse(res.body);
-                console.log(`AAAAAAAAA${getFil.length})`);
+                // console.log(`AAAAAAAAA${getFil.length})`);
                 if (getFil.length > 0 && Resp.length > 0) {
                     getrelay1.getStateAlerts(getFil, Resp);
-                    getrelay2.getStateAlerts(getFil, Resp);
-                    getrelay3.getStateAlerts(getFil, Resp);
-                    getrelay4.getStateAlerts(getFil, Resp);
-                    getrelay5.getStateAlerts(getFil, Resp);
-                    getrelay6.getStateAlerts(getFil, Resp);
-                    getrelay7.getStateAlerts(getFil, Resp);
-                    getrelay8.getStateAlerts(getFil, Resp);
+                    // getrelay2.getStateAlerts(getFil, Resp);
+                    // getrelay3.getStateAlerts(getFil, Resp);
+                    // getrelay4.getStateAlerts(getFil, Resp);
+                    // getrelay5.getStateAlerts(getFil, Resp);
+                    // getrelay6.getStateAlerts(getFil, Resp);
+                    // getrelay7.getStateAlerts(getFil, Resp);
+                    // getrelay8.getStateAlerts(getFil, Resp);
                     // tDelay1 == tDelay1num ?
                     // await getStateAlerts(getFil, Resp)
                     // : await getStateAlerts(getFil, Resp);
