@@ -1,19 +1,14 @@
-
+const fs = require('fs');
 const express = require('express');
 const bodyParser = require('body-parser');
-// const gpiop = require('rpi-gpio');
 const gpiopw = require('rpi-gpio').promise;
-// const { header } = require('express/lib/request');
 const localStorage = require("localStorage");
 const influx = require('influx');
 const localInfluxClient = new influx.InfluxDB('http://localhost:8086/staroffice');
-// const axios = require('axios')
 const app = express();
-// const cron = require('node-cron');
 var cors = require('cors');
 const request = require('request');
 const date = require('date-and-time');
-// const { STRING } = require('mysql/lib/protocol/constants/types');
 var adr = 'http://worldtimeapi.org/api/timezone/Asia/Kolkata';
 const nodemailer = require('nodemailer');
 require('dotenv').config();
@@ -23,6 +18,14 @@ var Gpio = require('onoff').Gpio;
 const { text } = require('body-parser');
 // MariaDB Lib
 const mariadb = require('mariadb');
+var macaddress = require('macaddress');
+const os = require('os');
+const disk = require('diskusage');
+// const cp = require('child_process');
+const localtunnel = require('localtunnel');
+const { spawn } = require('child_process');
+const http = require('http');
+// var localTunnelUrl = 'lt --port 3000 --subdomain myapp --print-requests --header "Bypass-Tunnel-Reminder: true"';
 
 var rel1 = new Gpio(5, 'null');
 var rel2 = new Gpio(6, 'null');
@@ -43,10 +46,6 @@ var getrelay6 = require("./relayR6");
 var getrelay7 = require("./relayR7");
 var getrelay8 = require("./relayR8");
 
-
-
-
-
 var getON = [];
 var getOFF = [];
 var getAlerts = [];
@@ -56,7 +55,7 @@ var d2_0 = [];
 var d2_1 = [];
 var con = [];
 var getFilterdata = [];
-var chart =[];
+var chart = [];
 
 module.exports.triggeron = triggeron;
 module.exports.triggeroff = triggeroff;
@@ -66,6 +65,7 @@ module.exports.triggeroff = triggeroff;
 // const { json } = require("express/lib/response");
 // const { clear } = require('localStorage');
 const sleep = require('sleep-promise');
+const { info } = require('console');
 
 
 // Status of Relay's
@@ -157,7 +157,7 @@ async function startup() {
 startup();
 
 // Mail declarations
-async function msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8) {
+async function msg(Relname, Rid, RUser, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay, RCheckTime, R1, R2, R3, R4, R5, R6, R7, R8) {
     let transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
@@ -177,14 +177,15 @@ async function msg(Relname, Rid, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafn
     };
 
     transporter.use('compile', hbs(handlebarOptions));
-    res.send(status);
+    // res.send(status);
     let messageOptions = {
         from: 'skylightstesting@gmail.com',
         to: 'skylightstesting@gmail.com',
-        subject: `Alert ${Relname}`,
+        subject: `Alert ${Relname} by ${RUser}`,
         // text: textmail, 
         template: 'email', // the name of the template file i.e email.handlebars
         context: {
+            User: RUser,
             Command: RCom,
             User_From_Alert: RuserFrom,
             Grafana_From_Alert: Rgrafprev,
@@ -239,10 +240,10 @@ async function msg_Inst(textmail, Relname) {
 
     transporter.sendMail(messageOptions, function (error, info) {
         if (error) {
-            throw error;
+            console.log(`Mail not sent Network Issue: ${error}`);
         } else {
             // console.log(Relname);
-            console.log('Email successfully sent!');
+            console.log(`Email successfully sent!: ${info}`);
         }
     });
 
@@ -259,11 +260,11 @@ function time(sendTime, Relname, Rid, RUser) {
             if (sendTime != 'Sch' && localStorage.getItem(Rid) != "true") {
                 textmail = `${RUser}\nInstant ${Relname} Date:${currentTime} ON Successfully`;
                 // let dString = Relname.slice(-1);
-                await inserDB(RUser, Relname.slice(-1) , 'ON', currentTime, 'Instant')
+                await inserDB(RUser, Relname.slice(-1), 'ON', currentTime, 'Instant')
             } else if (sendTime != 'Sch' && localStorage.getItem(Rid) != "false") {
                 textmail = `${RUser}\nInstant ${Relname} Date:${currentTime} OFF Successfully`;
-                await inserDB(RUser, Relname.slice(-1) , 'ON', currentTime, 'Instant')
-    
+                await inserDB(RUser, Relname.slice(-1), 'ON', currentTime, 'Instant')
+
             } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "true") {
                 textmail = `${RUser}\nScheduled ${Relname} Date:${currentTime} ON Successfully`;
             } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "false") {
@@ -271,28 +272,28 @@ function time(sendTime, Relname, Rid, RUser) {
             } else {
                 textmail = `nothing ${SchTime, localStorage.getItem(Rid)}`
             }
-        }else{
-            let currentTime = body.datetime.slice(0, 19);
-        // console.log(`TImeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee${body}`);
-        if (sendTime != 'Sch' && localStorage.getItem(Rid) != "true") {
-            textmail = `${RUser}\nInstant ${Relname} Date:${currentTime.replace("T", " Time: ")} ON Successfully`;
-            // let dString = Relname.slice(-1);
-            await inserDB(RUser, Relname.slice(-1) , 'ON', currentTime.replace("T", " "), 'Instant')
-        } else if (sendTime != 'Sch' && localStorage.getItem(Rid) != "false") {
-            textmail = `${RUser}\nInstant ${Relname} Date:${currentTime.replace("T", " Time: ")} OFF Successfully`;
-            await inserDB(RUser, Relname.slice(-1) , 'OFF', currentTime.replace("T", " "), 'Instant')
-
-        } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "true") {
-            textmail = `${RUser}\nScheduled ${Relname} Date:${currentTime.replace("T", " Time: ")} ON Successfully`;
-            await inserDB(RUser, Relname.slice(-1) , 'ON', currentTime.replace("T", " "), 'Scheduled')
-        } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "false") {
-            textmail = `${RUser}\nScheduled ${Relname} Date:${currentTime.replace("T", " Time: ")} OFF Successfully`;
-            await inserDB(RUser, Relname.slice(-1) , 'OFF', currentTime.replace("T", " "), 'Scheduled')
         } else {
-            textmail = `nothing ${SchTime, localStorage.getItem(Rid)}`
+            let currentTime = body.datetime.slice(0, 19);
+            // console.log(`TImeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee${body}`);
+            if (sendTime != 'Sch' && localStorage.getItem(Rid) != "true") {
+                textmail = `${RUser}\nInstant ${Relname} Date:${currentTime.replace("T", " Time: ")} ON Successfully`;
+                // let dString = Relname.slice(-1);
+                await inserDB(RUser, Relname.slice(-1), 'ON', currentTime.replace("T", " "), 'Instant')
+            } else if (sendTime != 'Sch' && localStorage.getItem(Rid) != "false") {
+                textmail = `${RUser}\nInstant ${Relname} Date:${currentTime.replace("T", " Time: ")} OFF Successfully`;
+                await inserDB(RUser, Relname.slice(-1), 'OFF', currentTime.replace("T", " "), 'Instant')
+
+            } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "true") {
+                textmail = `${RUser}\nScheduled ${Relname} Date:${currentTime.replace("T", " Time: ")} ON Successfully`;
+                await inserDB(RUser, Relname.slice(-1), 'ON', currentTime.replace("T", " "), 'Scheduled')
+            } else if (sendTime == 'Sch' && localStorage.getItem(Rid) != "false") {
+                textmail = `${RUser}\nScheduled ${Relname} Date:${currentTime.replace("T", " Time: ")} OFF Successfully`;
+                await inserDB(RUser, Relname.slice(-1), 'OFF', currentTime.replace("T", " "), 'Scheduled')
+            } else {
+                textmail = `nothing ${SchTime, localStorage.getItem(Rid)}`
+            }
         }
-    }
-        return msg_Inst(textmail, Relname);
+        return await msg_Inst(textmail, Relname);
     });
 }
 
@@ -388,7 +389,7 @@ app.use(bodyParser.json());
 app.post('/switchLedR1', async function (req, res) {
     const statusExits = req && req.body && req.body.status != null;
     const status = statusExits ? req.body.status.toString() == "true" : false;
-    console.log(`Sta:${req.body.status.toString()}  ${req.body.name.toString()}}}`); 
+    console.log(`Sta:${req.body.status.toString()}  ${req.body.name.toString()}}}`);
     gpiopw.setup(29, gpiopw.DIR_OUT).then(() => {
         return gpiopw.write(29, status);
     }).catch((err) => {
@@ -608,7 +609,6 @@ app.post('/switchLedR8', async function (req, res) {
         console.log(`error:${err.toString()}`);
     });
     if (status == true) {
-
         localStorage.setItem('R8', 'true');
         console.log(`T${status}`);
     } else {
@@ -641,15 +641,12 @@ app.post('/influxChart', async function (req, res) {
     const status = statusExits ? req.body.status.toString() : "null";
     console.log(`Sta:${req.body.status.toString()}`);
     // res.setHeader('Content-Type', 'text/html');
-    localInfluxClient.query(`select * from ${status}`).then(async (api) =>{
+    localInfluxClient.query(`select * from ${status}`).then(async (api) => {
         chart = api
         console.log(`Chart ${JSON.parse(JSON.stringify(chart))}`);
-       return res.send(JSON.parse(JSON.stringify(chart)));
-
-        
+        return res.send(JSON.parse(JSON.stringify(chart)));
     });
-    
-//    return res.send(chart);
+    //    return res.send(chart);
 });
 
 app.get('/infChart', (req, res) => {
@@ -658,67 +655,65 @@ app.get('/infChart', (req, res) => {
 });
 
 //MariaDB connection Insert
-async function inserDB(Uname, Rname, val, dt, cause){
+async function inserDB(Uname, Rname, val, dt, cause) {
     const pool = mariadb.createPool({
-        host: 'localhost', 
+        host: 'localhost',
         user: 'root',
         database: 'skydb',
         password: 'sky1234',
         connectionLimit: 5
-   });
-   console.log(`DDDD${Uname}, ${Rname}, ${val}, '${dt}, ${cause}`);
+    });
+    console.log(`DDDD${Uname}, ${Rname}, ${val}, '${dt}, ${cause}`);
     return pool.getConnection()
-       .then(conn => {
-         conn.query(`INSERT INTO history (USERNAME, RELAY, VAL, DATETIME, CAUSE) VALUES ('${Uname}', '${Rname}', '${val}', '${dt}', '${cause}');`)
-           .then((rows) => {
-             console.log(rows); 
-           })
-           .then((res) => {
-             // console.log(res); 
-             conn.end();
-           })
-           .catch(err => {
-            
-             console.log(err); 
-             conn.end();
-           })
-           
-       }).catch(err => {
-           console.log(`HH${err}`);
-         //not connected
-       });
+        .then(conn => {
+            conn.query(`INSERT INTO history (USERNAME, RELAY, VAL, DATETIME, CAUSE) VALUES ('${Uname}', '${Rname}', '${val}', '${dt}', '${cause}');`)
+                .then((rows) => {
+                    console.log(rows);
+                })
+                .then((res) => {
+                    // console.log(res); 
+                    //  conn.end();
+                })
+                .catch(err => {
+                    console.log(err);
+                    conn.end();
+                })
+        }).catch(err => {
+            console.log(`HH${err}`);
+            //not connected
+        });
 }
 
 //MariaDB call Quary
 app.get('/onOffHistory', (req, res) => {
-        const pool = mariadb.createPool({
-        host: 'localhost', 
+    const pool = mariadb.createPool({
+        host: 'localhost',
         user: 'root',
         database: 'skydb',
         password: 'sky1234',
         connectionLimit: 5
-   });
-//    console.log(`DDDD${Uname}, ${Rname}, ${val}, '${dt}, ${cause}`);
-     pool.getConnection()
-       .then(conn => {
-         conn.query(`SELECT * FROM history`)
-           .then((rows) => {
-             console.log(rows); 
-             res.send(rows);
-           })
-           .then((res) => {
-             // console.log(res); 
-             conn.end();
-           })
-           .catch(err => {
-            
-             console.log(err); 
-             conn.end();
-           })
-           
-       })
+    });
+    //    console.log(`DDDD${Uname}, ${Rname}, ${val}, '${dt}, ${cause}`);
+    pool.getConnection()
+        .then(conn => {
+            conn.query(`SELECT * FROM history`)
+                .then((rows) => {
+                    console.log(rows);
+                    res.send(rows);
+                })
+                .then((res) => {
+                    // console.log(res); 
+                    //  conn. .end();
+                })
+                .catch(err => {
+
+                    console.log(err);
+                    conn.end();
+                })
+
+        })
     //    res.send("hh")
-    
+
 });
 
 // Trigger Relay's ON
@@ -735,8 +730,8 @@ async function triggeron(Rpin, Relname, Rid, RUser, RCom, triggeronTime, RuserFr
         let R6 = localStorage.getItem('R6') == "true" ? "OFF" : "ON";
         let R7 = localStorage.getItem('R7') == "true" ? "OFF" : "ON";
         let R8 = localStorage.getItem('R8') == "true" ? "OFF" : "ON";
-        let dd = new Date().getMilliseconds();
-        let RCheckTime = new Date().toString().replace("GMT+0530 (India Standard Time)", "") + dd;
+        // let dd = new Date().getMilliseconds();
+        let RCheckTime = new Date().toString().replace("GMT+0530 (India Standard Time)", "") + new Date().getMilliseconds();
         return gpiopw.write(Rpin, false).then(async () => {
             console.log("Helloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo");
             // sendTime = body.datetime.slice(0, 19).replace("T", " Time: ");
@@ -744,7 +739,7 @@ async function triggeron(Rpin, Relname, Rid, RUser, RCom, triggeronTime, RuserFr
             let sendTime = 'Sch'
             Rgrafnew == null ?
                 time(sendTime, Relname, Rid, RUser)
-                : await msg(Relname, Rid, RCom, RUser, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8);
+                : await msg(Relname, Rid, RUser, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay, RCheckTime, R1, R2, R3, R4, R5, R6, R7, R8);
         });
     }).catch((err) => {
         console.log(`error:${err.toString()}`);
@@ -765,14 +760,14 @@ async function triggeroff(Rpin, Relname, Rid, RUser, RCom, triggeronTime, RuserF
         let R6 = localStorage.getItem('R6') == "true" ? "OFF" : "ON";
         let R7 = localStorage.getItem('R7') == "true" ? "OFF" : "ON";
         let R8 = localStorage.getItem('R8') == "true" ? "OFF" : "ON";
-        let dd = new Date().getMilliseconds();
-        let RCheckTime = new Date().toString().replace("GMT+0530 (India Standard Time)", "") + dd;
+        // let dd = new Date().getMilliseconds();
+        let RCheckTime = new Date().toString().replace("GMT+0530 (India Standard Time)", "") + new Date().getMilliseconds();
         localStorage.setItem(Rid, 'true')
         return gpiopw.write(Rpin, true).then(async () => {
             let sendTime = 'Sch'
             Rgrafnew == null ?
                 time(sendTime, Relname, Rid, RUser)
-                : await msg(Relname, Rid, RCom, RUser, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RCheckTime, RtimeDelay, R1, R2, R3, R4, R5, R6, R7, R8);
+                : await msg(Relname, Rid, RUser, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay, RCheckTime, R1, R2, R3, R4, R5, R6, R7, R8);
         });
     }).catch((err) => {
         console.log(`error:${err.toString()}`);
@@ -812,53 +807,53 @@ async function getonData() {
                     let Relname = 'Relay_1';
                     let Rid = 'R1';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 }
                 else if (onvalue == getONdata && localStorage.getItem('R2') != "false" && getONRelay == 2 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 31;
                     let Relname = 'Relay_2';
                     let Rid = 'R2';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 } else if (onvalue == getONdata && localStorage.getItem('R3') != "false" && getONRelay == 3 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 33;
                     let Relname = 'Relay_3';
                     let Rid = 'R3';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 } else if (onvalue == getONdata && localStorage.getItem('R4') != "false" && getONRelay == 4 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 36;
                     let Relname = 'Relay_4';
                     let Rid = 'R4';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 } else if (onvalue == getONdata && localStorage.getItem('R5') != "false" && getONRelay == 5 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 35;
                     let Relname = 'Relay_5';
                     let Rid = 'R5';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 }
                 else if (onvalue == getONdata && localStorage.getItem('R6') != "false" && getONRelay == 6 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 38;
                     let Relname = 'Relay_6';
                     let Rid = 'R6';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 }
                 else if (onvalue == getONdata && localStorage.getItem('R7') != "false" && getONRelay == 7 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 40;
                     let Relname = 'Relay_7';
                     let Rid = 'R7';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 }
                 else if (onvalue == getONdata && localStorage.getItem('R7') != "false" && getONRelay == 8 && (isdaysMatch || getONDays.trim().length === 0)) {
                     let Rpin = 37;
                     let Relname = 'Relay_8';
                     let Rid = 'R8';
                     let RUser = getUser;
-                    await triggeron(Rpin, Relname, Rid, RUser);
+                    await triggeron(Rpin, Relname, Rid, getUser);
                 }
                 else {
                     console.log("onunsuccess");
@@ -896,49 +891,49 @@ async function getoffData() {
                     let Relname = 'Relay_1';
                     let Rid = 'R1'
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R2') != "true" && getOFFRelay == 2 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 31;
                     let Relname = 'Relay_2';
                     let Rid = 'R2'
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R3') != "true" && getOFFRelay == 3 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 33;
                     let Relname = 'Relay_3';
                     let Rid = 'R3';
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R4') != "true" && getOFFRelay == 4 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 36;
                     let Relname = 'Relay_4';
                     let Rid = 'R4';
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R5') != "true" && getOFFRelay == 5 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 35;
                     let Relname = 'Relay_5';
                     let Rid = 'R5';
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R6') != "true" && getOFFRelay == 6 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 38;
                     let Relname = 'Relay_6';
                     let Rid = 'R6';
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R7') != "true" && getOFFRelay == 7 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 40;
                     let Relname = 'Relay_7';
                     let Rid = 'R7';
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else if (offvalue == getOFFdata && localStorage.getItem('R8') != "true" && getOFFRelay == 8 && (isOFFdaysMatch || getOFFDays.trim().length === 0)) {
                     let Rpin = 37;
                     let Relname = 'Relay_8';
                     let Rid = 'R8';
                     let RUser = getUser;
-                    await triggeroff(Rpin, Relname, Rid, RUser);
+                    await triggeroff(Rpin, Relname, Rid, getUser);
                 } else {
                     console.log("offunsuccess");
                 }
@@ -1036,4 +1031,84 @@ async function getapi(getFilterdata) {
         // console.log(`Data:${getFilterdata}`);
     }
 }
-//
+
+
+app.get('/getMac', (req, res) => {
+    macaddress.one().then(function (mac) {
+        console.log("Mac address for this host: %s", mac);
+        res.send(mac);
+    })
+});
+
+
+app.get('/os', async (req, res) => {
+    var DiskTotal = "";
+    var DiskUsed = "";
+    var DiskAvailable = "";
+    const tempC = parseFloat(fs.readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf8')) / 1000;
+    disk.check('/', function (err, info) {
+        if (err) {
+            console.log(err);
+        } else {
+            DiskTotal = (info.total / 1073741824).toFixed(2);
+            DiskUsed = ((info.total - info.available) / 1073741824).toFixed(2);
+            DiskAvailable = (info.available / 1073741824).toFixed(2);
+        }
+    });
+    let mA = await macaddress.one();
+    const data = {
+        osTunnelUrl: await terminalCommand(),
+        osDiskTotal: DiskTotal,
+        osDiskUsed: DiskUsed,
+        osDiskAvail: DiskAvailable,
+        osHostname: mA.replace(/:/g, ''),
+        osType: os.type(),
+        osRAMFreeMem: (os.freemem() / 1073741824).toFixed(2),
+        osRAMTotalMem: (os.totalmem() / 1073741824).toFixed(2),
+        osWifiNetworkInterfaces: os.networkInterfaces(),
+        osGateWayUpTime: formatDuration(os.uptime()),
+        osUserinfo: os.userInfo().username,
+        osGatewayTemp: `${tempC} °C`
+    };
+    res.json(data);
+});
+
+function formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours}h:${minutes}m:${remainingSeconds.toString().split('.')[0]}s`;
+}
+
+function terminalCommand() {
+    return new Promise(async (resolve, reject) => {
+        let mA = await macaddress.one();
+        const tunnel = spawn('lt', ['--port', '3000', '--subdomain', `${mA.replace(/:/g, '')}`, '--header : Bypass-Tunnel-Reminder: true']);
+        tunnel.stdout.on('data', (data) => {
+            console.log(`stdout: ${data}`);
+            resolve(data.toString().trim()); // resolve with the tunnel URL as a string
+          });
+      
+          tunnel.stderr.on('data', (data) => {
+            console.error(`stderr: ${data}`);
+            reject(data.toString().trim()); // reject with any error messages as a string
+          });
+      
+        
+
+        // tunnel.stderr.on('data', (data) => {
+        //   console.error(`stderr: ${data}`);
+        // });
+        //  await cp.exec('lt', ['--port', '3000'], (error, stdout, stderr) => {
+        //     if (error) {
+        //       console.error(`exec error: ${error}`);
+        //       reject(error);
+        //     } else {
+        //       resolve(stdout.trim());
+        //     }
+        //   });
+    });
+}
+
+
+

@@ -17,9 +17,7 @@ var host;
 // open connection to a serial port
 
 async function sCreateInstance(c) {
-  // return new Promise(function (resolve, reject) {
   console.log(sModbusClient.isOpen);
-  // if (!sModbusClient.isOpen) {
   if (fs.existsSync("/dev/ttyUSB0")) {
     return new Promise(async function (resolve, reject) {
       try {
@@ -27,10 +25,8 @@ async function sCreateInstance(c) {
           "/dev/ttyUSB0",
           configuration.values[c].con,
         );
-        //sModbusClient.setID(configuration.values[c].meter_no);
         sModbusClient.setTimeout(1000);
         console.log("instance created");
-        //await ReadElmeasure();
         resolve();
       } catch (error) {
         console.log(
@@ -49,8 +45,6 @@ async function sCreateInstance(c) {
     console.log("check if port is loose or disconnected !");
     resolve();
   }
-  // }
-  // })
 }
 
 /*-------------------------------*/
@@ -80,9 +74,7 @@ async function ReadElmeasure(c) {
 //Meter id1
 
 async function writeDataToCloud1(data) {
-  //console.log();
   return new Promise(function (resolve, reject) {
-    // console.log()
     if (data != null && data.length > 0) {
       var date = new Date();
       localInfluxClient
@@ -172,7 +164,6 @@ async function writeDataToCloud1(data) {
           }
         )
         .then(async () => {
-          // console.log(data)
           await sModbusClient.close();
           console.log(`---2---${host}Data inserted to DB !`);
           data = [];
@@ -205,10 +196,6 @@ setInterval(async function () {
         await ReadElmeasure(c);
         await writeDataToCloud1(data);
       }
-
-
-
-
     }
     cnt = cnt + 1;
   } catch (err) {
