@@ -117,6 +117,28 @@ async function getStateAlerts(getFil, Resp) {
 
                                 // await sleep(setTR1);
                                 // --------------------------------------------------------------------------------------------------------------------------------
+
+// refactor code
+// for (let i = 2; i <= 8; i++) {
+//     const relay = "R" + i;
+//     if (element_1[relay] == "off" || element_1[relay] == `off${relay}`) {
+//       console.log(`No Dependent ${relay}`);
+//     } else {
+//       const localState = localStorage.getItem(relay);
+//       if (element_1[relay] == `on${relay}` && localState == "false") {
+//         console.log(`${relay} already on`);
+//       } else if (element_1[relay] == `off${relay}` && localState == "true") {
+//         console.log(`${relay} already off`);
+//       } else {
+//         clearTimeout(waitR1check);
+//         tLoopR1_3 = true;
+//         console.log(`${relay} State Mismatch`);
+//         await infSendtoDB.writeDataToCloud(element_2);
+//       }
+//     }
+//   }
+
+
                                 //Dependent Relay_2 checking 
                                 if (element_1.R2 == "offR2" && localStorage.getItem('R2') == "true") {
                                     console.log("Relay_2 already off");

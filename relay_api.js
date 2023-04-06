@@ -23,10 +23,19 @@ const os = require('os');
 const disk = require('diskusage');
 // const cp = require('child_process');
 const localtunnel = require('localtunnel');
-const { spawn } = require('child_process');
-const http = require('http');
+const { spawn, exec, execSync } = require('child_process');
+const https = require('https');
 // var localTunnelUrl = 'lt --port 3000 --subdomain myapp --print-requests --header "Bypass-Tunnel-Reminder: true"';
+app.use(cors());
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header('Access-Control-Allow-Methods', 'DELETE, PUT, GET, POST');
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+ });
+ app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use(bodyParser.json());
 var rel1 = new Gpio(5, 'null');
 var rel2 = new Gpio(6, 'null');
 var rel3 = new Gpio(13, 'null');
@@ -66,6 +75,9 @@ module.exports.triggeroff = triggeroff;
 // const { clear } = require('localStorage');
 const sleep = require('sleep-promise');
 const { info } = require('console');
+
+
+
 
 
 // Status of Relay's
@@ -153,20 +165,57 @@ async function startup() {
     }
 }
 
-
+var transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+        user: 'skylightstesting@gmail.com',
+        pass: 'xifapatnoercyles'
+    }
+});
 startup();
 
+
+app.post('/contact', async (req, res) => {
+    console.log(req.body);
+    if (!req.body.name || !req.body.email || !req.body.message) {
+      res.status(400).send('Missing required fields');
+      return;
+    }
+  
+    const { name, email, message } = req.body;
+  
+    try {
+      // Perform any necessary validation or processing of the form data here
+  
+      const mailOptions = {
+        from: email,
+        to: 'skylightstesting@gmail.com',
+        subject: `Contact from ${email}`,
+        text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`
+      };
+  
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Message sent: %s', info.messageId);
+      res.status(200).send('Message sent successfully!');
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Message failed to send.');
+    }
+  });
+  
 // Mail declarations
 async function msg(Relname, Rid, RUser, RCom, triggeronTime, RuserFrom, RuserTo, Rgrafnew, Rgrafprev, RcretedTime, RtimeDelay, RCheckTime, R1, R2, R3, R4, R5, R6, R7, R8) {
-    let transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-            user: 'skylightstesting@gmail.com',
-            pass: 'xifapatnoercyles'
-        }
-    });
+    // let transporter = nodemailer.createTransport({
+    //     host: 'smtp.gmail.com',
+    //     port: 465,
+    //     secure: true,
+    //     auth: {
+    //         user: 'skylightstesting@gmail.com',
+    //         pass: 'xifapatnoercyles'
+    //     }
+    // });
 
     const handlebarOptions = {
         viewEngine: {
@@ -221,15 +270,15 @@ async function msg(Relname, Rid, RUser, RCom, triggeronTime, RuserFrom, RuserTo,
 // Mail declarations
 
 async function msg_Inst(textmail, Relname) {
-    let transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-            user: 'skylightstesting@gmail.com',
-            pass: 'xifapatnoercyles'
-        }
-    });
+    // let transporter = nodemailer.createTransport({
+    //     host: 'smtp.gmail.com',
+    //     port: 465,
+    //     secure: true,
+    //     auth: {
+    //         user: 'skylightstesting@gmail.com',
+    //         pass: 'xifapatnoercyles'
+    //     }
+    // });
 
     let messageOptions = {
         from: 'skylightstesting@gmail.com',
@@ -237,6 +286,13 @@ async function msg_Inst(textmail, Relname) {
         subject: `Alert ${Relname}`,
         text: textmail,
     };
+    // try {
+    //     const info = await transporter.sendMail(messageOptions);
+    //     console.log(`Email successfully sent to ${info.messageId}`);
+    //   } catch (error) {
+    //     console.error(`Error occurred while sending email to ${error}`);
+    //   }
+
 
     transporter.sendMail(messageOptions, function (error, info) {
         if (error) {
@@ -302,7 +358,7 @@ app.use("/filter", (req, res, next) => {
     new Promise((resolve, reject) => {
         request(
             {
-                url: "http://192.168.1.93:3000/api/annotations",
+                url: "http://localhost:3000/api/annotations",
                 // uid/g5Z-2-kgk",
                 headers: {
                     Authorization:
@@ -347,7 +403,7 @@ app.use("/names", (req, res, next) => {
     new Promise((resolve, reject) => {
         request(
             {
-                url: "http://192.168.1.93:3000/api/annotations",
+                url: "http://localhost:3000/api/annotations",
                 // uid/g5Z-2-kgk",
                 headers: {
                     Authorization:
@@ -383,7 +439,6 @@ app.use("/names", (req, res, next) => {
     res.send(getFilterdata);
 });
 
-app.use(bodyParser.json());
 
 // relay1 get and post request
 app.post('/switchLedR1', async function (req, res) {
@@ -783,7 +838,7 @@ async function triggeroff(Rpin, Relname, Rid, RUser, RCom, triggeronTime, RuserF
 
 
 async function getonData() {
-    url = 'http://192.168.1.93/Sky/findOnBadge.php';
+    url = 'http://localhost/Sky/findOnBadge.php';
     request(url, async (error, response, body) => {
         if (!error && response.statusCode === 200) {
             // const Response 
@@ -868,7 +923,7 @@ async function getonData() {
 
 
 async function getoffData() {
-    url = 'http://192.168.1.93/Sky/findOffBadge.php';
+    url = 'http://localhost/Sky/findOffBadge.php';
     request(url, async (error, response, body) => {
         if (!error && response.statusCode === 200) {
             getOFF = JSON.parse(body);
@@ -950,7 +1005,7 @@ setInterval(async () => {
     await getoffData();
     await getapi(getFilterdata);
     // await apiinflux(getFilterdata)
-    url = 'http://192.168.1.93/Sky/getAlertStates.php';
+    url = 'http://localhost/Sky/getAlertStates.php';
     request(url, async (error, response, body) => {
         if (!error && response.statusCode === 200) {
             var Resp = JSON.parse(body)
@@ -961,7 +1016,7 @@ setInterval(async () => {
         if (Resp.length > 0) {
             request({
                 method: 'GET',
-                url: 'http://192.168.1.93:9000/names'
+                url: 'http://localhost:9000/names'
             }, async function (err, res) {
                 if (err) return console.error(err.message);
                 var getFil = JSON.parse(res.body);
@@ -994,7 +1049,7 @@ async function getapi(getFilterdata) {
     new Promise((resolve, reject) => {
         request(
             {
-                url: "http://192.168.1.93:3000/api/annotations",
+                url: "http://localhost:3000/api/annotations",
                 // uid/g5Z-2-kgk",
                 headers: {
                     Authorization:
@@ -1034,10 +1089,19 @@ async function getapi(getFilterdata) {
 
 
 app.get('/getMac', (req, res) => {
-    macaddress.one().then(function (mac) {
-        console.log("Mac address for this host: %s", mac);
-        res.send(mac);
-    })
+    exec("cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2", (error, stdout, stderr) => {
+        if (error) {
+          res.statusCode = 500;
+          res.end(`Error: ${error.message}`);
+        } else if (stderr) {
+          res.statusCode = 500;
+          res.end(`Error: ${stderr}`);
+        } else {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/plain');
+          res.end(stdout.trim());
+        }
+      });
 });
 
 
@@ -1055,13 +1119,14 @@ app.get('/os', async (req, res) => {
             DiskAvailable = (info.available / 1073741824).toFixed(2);
         }
     });
-    let mA = await macaddress.one();
+    let mA =   execSync("cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2").toString().trim();//await macaddress.one();
+    console.log(`GGGGG${mA}`);
     const data = {
-        osTunnelUrl: await terminalCommand(),
+        osTunnelUrl: await checkWebsite(`https://${mA}.loca.lt/login`),
         osDiskTotal: DiskTotal,
         osDiskUsed: DiskUsed,
         osDiskAvail: DiskAvailable,
-        osHostname: mA.replace(/:/g, ''),
+        osHostname: mA, //.replace(/:/g, ''),
         osType: os.type(),
         osRAMFreeMem: (os.freemem() / 1073741824).toFixed(2),
         osRAMTotalMem: (os.totalmem() / 1073741824).toFixed(2),
@@ -1080,34 +1145,68 @@ function formatDuration(seconds) {
     return `${hours}h:${minutes}m:${remainingSeconds.toString().split('.')[0]}s`;
 }
 
-function terminalCommand() {
+async function checkWebsite(turl) {
+    return new Promise((resolve, reject) => {
+      https.get(turl, async (res) => {
+        if (res.statusCode === 200) {
+          console.log('Website is working');
+          resolve(turl);
+        } else {
+          console.log(`Website returned status code ${res.statusCode}`);
+          let mA = execSync("cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2").toString().trim();//await macaddress.one();
+          resolve(await terminalCommand(mA));
+        //   resolve();
+        }
+      }).on('error', (err) => {
+        console.error(`Error while making request: ${err}`);
+        reject(err);
+      });
+    });
+  }
+
+function terminalCommand(mA) {
     return new Promise(async (resolve, reject) => {
-        let mA = await macaddress.one();
-        const tunnel = spawn('lt', ['--port', '3000', '--subdomain', `${mA.replace(/:/g, '')}`, '--header : Bypass-Tunnel-Reminder: true']);
-        tunnel.stdout.on('data', (data) => {
-            console.log(`stdout: ${data}`);
-            resolve(data.toString().trim()); // resolve with the tunnel URL as a string
+        const tunnel = spawn('lt', ['--port', '3000', '--subdomain', `${mA}`, '--header : Bypass-Tunnel-Reminder: true']);
+        tunnel.stdout.on('data', async(data) => {
+            console.log(`stdout: ${data} ${mA}`);
+            const parsedUrl = url.parse(data.toString().trim()).href;
+            resolve(parsedUrl); // resolve with the tunnel URL as a string
+            await insertgateWayInfo(os.userInfo().username)
           });
       
           tunnel.stderr.on('data', (data) => {
             console.error(`stderr: ${data}`);
             reject(data.toString().trim()); // reject with any error messages as a string
           });
-      
-        
-
-        // tunnel.stderr.on('data', (data) => {
-        //   console.error(`stderr: ${data}`);
-        // });
-        //  await cp.exec('lt', ['--port', '3000'], (error, stdout, stderr) => {
-        //     if (error) {
-        //       console.error(`exec error: ${error}`);
-        //       reject(error);
-        //     } else {
-        //       resolve(stdout.trim());
-        //     }
-        //   });
     });
+}
+
+async function insertgateWayInfo(gatewayName, macAdd, url) {
+    const pool = mariadb.createPool({
+        host: 'localhost',
+        user: 'root',
+        database: 'skydb',
+        password: 'sky1234',
+        connectionLimit: 5
+    });
+    console.log(`DDDD${url}`);
+    return pool.getConnection()
+        .then(conn => {
+            conn.query(`INSERT INTO gatewayInfo (GATEWAYNAME, MACADD, URL) VALUES ('${gatewayName}', '${macAdd}', '${url}');`)
+                .then((rows) => {
+                    console.log(rows);
+                })
+                .then((res) => {
+                  
+                })
+                .catch(err => {
+                    console.log(err);
+                    conn.end();
+                })
+        }).catch(err => {
+            console.log(`HH${err}`);
+            //not connected
+        });
 }
 
 
