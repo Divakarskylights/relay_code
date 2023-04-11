@@ -21,10 +21,12 @@ const mariadb = require('mariadb');
 var macaddress = require('macaddress');
 const os = require('os');
 const disk = require('diskusage');
-// const cp = require('child_process');
-const localtunnel = require('localtunnel');
+// const localtunnel = require('localtunnel');
 const { spawn, exec, execSync } = require('child_process');
 const https = require('https');
+const { signOut } = require('./cookieClear');
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 // var localTunnelUrl = 'lt --port 3000 --subdomain myapp --print-requests --header "Bypass-Tunnel-Reminder: true"';
 app.use(cors());
 app.use(function(req, res, next) {
@@ -73,8 +75,8 @@ module.exports.triggeroff = triggeroff;
 
 // const { json } = require("express/lib/response");
 // const { clear } = require('localStorage');
-const sleep = require('sleep-promise');
-const { info } = require('console');
+// const sleep = require('sleep-promise');
+// const { info } = require('console');
 
 
 
@@ -174,8 +176,11 @@ var transporter = nodemailer.createTransport({
         pass: 'xifapatnoercyles'
     }
 });
+
+
 startup();
 
+app.get('/signout', signOut);
 
 app.post('/contact', async (req, res) => {
     console.log(req.body);
@@ -188,14 +193,14 @@ app.post('/contact', async (req, res) => {
   
     try {
       // Perform any necessary validation or processing of the form data here
-  
+
       const mailOptions = {
         from: email,
         to: 'skylightstesting@gmail.com',
         subject: `Contact from ${email}`,
         text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`
       };
-  
+
       const info = await transporter.sendMail(mailOptions);
       console.log('Message sent: %s', info.messageId);
       res.status(200).send('Message sent successfully!');
@@ -1089,6 +1094,7 @@ async function getapi(getFilterdata) {
 
 
 app.get('/getMac', (req, res) => {
+    
     exec("cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2", (error, stdout, stderr) => {
         if (error) {
           res.statusCode = 500;
